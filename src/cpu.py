@@ -80,7 +80,8 @@ class Cpu:
     def execute(self):
         # All opcodes are big endian
         opcode = self._get_op()
-        # print("{0:x}".format(opcode))
+        print("0x{:04x}".format(opcode))
+        breakpoint()
 
         # Get the prefix and execute corresponding instruction
         prefix = (opcode & 0xF000) >> 12

@@ -55,7 +55,7 @@ class Chip8:
                 print("HALTED")
 
             # time.sleep(1 / 60)  # 60 fps
-            time.sleep(30 / 60)  # 60 fps
+            # time.sleep(30 / 60)  # 60 fps
 
             # ADD UPDATED TIME TO DEBUG
             self.x.append(int(round(time.time() * 1000)) - millis)
