@@ -113,5 +113,5 @@ class Chip8:
         for i in range(len(registers)):
             lbl = self.debug[i]
             reg = self.mmu.registers[registers[i]]
-            val = (registers[i], "{0:x}".format(reg))
+            val = (registers[i], "{0:02x}".format(reg))
             lbl.config(text="%s - %s" % val)
