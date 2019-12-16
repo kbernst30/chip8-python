@@ -31,20 +31,38 @@ class Mmu:
         # Address register I is 16 bits
         self.address_register = 0
 
+        # Timers
+        self.delay_timer = 0
+        self.sound_timer = 0
+
+    def load_rom(self, rom):
+        starting_address = 0x200
+        for byte in rom:
+            self.memory[starting_address] = byte
+            starting_address += 1
+
     def read_register(self, reg):
-        pass
+        return self.registers['V' + reg]
 
     def write_register(self, reg, value):
-        pass
+        self.registers['V' + reg] = value
 
     def read_address_register(self):
-        pass
+        return self.address_register
 
     def write_address_register(self, value):
-        pass
+        self.address_register = value
 
     def read(self, address):
-        pass
+        return self.memory[address]
 
     def write(self, address, value):
-        pass
+        self.memory[address] = value
+
+    def update_delay_timer(self):
+        if self.delay_timer > 0:
+            self.delay_timer -= 1
+
+    def update_sound_timer(self):
+        if self.sound_timer > 0:
+            self.sound_timer -= 1

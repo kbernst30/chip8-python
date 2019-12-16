@@ -5,15 +5,19 @@ from util import int_to_hex
 
 class Cpu:
 
-    def __init__(self, mmu, display):
+    def __init__(self, mmu, display, keyboard):
         self.mmu = mmu
         self.display = display
+        self.keyboard = keyboard
 
-        self.pc = 0
+        self.pc = 0x200  # THis is where game is loaded in memory
         self.stack = []
 
+        self.halted = False
+        self.on_unhalt = None
+
         self.primary_op_handlers = {
-            0x0: lambda op:  self.zero_prefix_op_handlers[op & 0xFFF](op),
+            0x0: lambda op: self.zero_prefix_op_handlers[op & 0xFFF](op),
             0x1: self.handle_jump_op,
             0x2: self.handle_call_op,
             0x3: self.handle_truthy_value_condition_op,
@@ -26,9 +30,9 @@ class Cpu:
             0xA: self.handle_address_register_to_value_op,
             0xB: self.handle_jump_with_offset_op,
             0xC: self.handle_set_register_to_random_bitwise_value_op,
-            0xD: None,
-            0xE: None,
-            0xF: None,
+            0xD: self.handle_draw_sprite_op,
+            0xE: lambda op: self.e_prefix_op_handlers[op & 0xFF](op),
+            0xF: lambda op: self.f_prefix_op_handlers[op & 0xFF](op)
         }
 
         # Ops that start with prefix 0 (i.e. 0x00EE) should lookup here by
@@ -52,13 +56,39 @@ class Cpu:
             0xE: self.handle_bit_shift_left_op,
         }
 
+        # Ops that start with prefix E (i.e. 0xEXA1) should lookup here by
+        # their last two digits in the hex op
+        self.e_prefix_op_handlers = {
+            0x9E: self.handle_key_pressed_skip_op,
+            0xA1: self.handle_key_not_pressed_skip_op
+        }
+
+        # Ops that start with prefix F (i.e. 0xFX0A) should lookup here by
+        # their last two digits in the hex op
+        self.f_prefix_op_handlers = {
+            0x07: self.handle_set_register_to_delay_timer_op,
+            0x0A: self.handle_key_press_await_op,
+            0x15: self.handle_set_delay_timer_to_register_op,
+            0x18: self.handle_set_sound_timer_to_register_op,
+            0x1E: self.handle_add_register_to_address_op,
+            0x29: self.handle_set_address_to_sprite_location_op,
+            0x33: self.handle_set_bcd_op,
+            0x55: self.handle_store_registers_in_address_op,
+            0x65: self.handle_fill_registers_from_address_op,
+        }
+
     def execute(self):
         # All opcodes are big endian
         opcode = self._get_op()
 
         # Get the prefix and execute corresponding instruction
         prefix = (opcode & 0xF000) >> 12
-        self.primary_op_handlers[prefix](opcode)
+        try:
+            self.primary_op_handlers[prefix](opcode)
+        except KeyError:
+            print("Unknown op encounter - %s", "{0:x}".format(opcode))
+
+        return self.pc
 
     def handle_clear_screen_op(self, op):
         '''
@@ -282,7 +312,7 @@ class Cpu:
 
     def handle_jump_with_offset_op(self, op):
         '''
-        Instruction - 0xBNNN - Jump to address NNN plus value at V0
+        Instruction 0xBNNN - Jump to address NNN plus value at V0
         '''
 
         value = self.mmu.read_register('0')
@@ -291,7 +321,7 @@ class Cpu:
 
     def handle_set_register_to_random_bitwise_value_op(self, op):
         '''
-        Instruction - 0xCXNN - Set VX to result of bitwise AND of NN and
+        Instruction 0xCXNN - Set VX to result of bitwise AND of NN and
         random number from 0-255
         '''
 
@@ -299,6 +329,171 @@ class Cpu:
         value = op & 0xFF
         rand = random.randint(0, 255)
         self.mmu.write_register(register, value & rand)
+
+    def handle_draw_sprite_op(self, op):
+        '''
+        Instruction 0xDXYN - Draws a sprite at coordinate (VX, VY) with a
+        width of 8 pixels, and a height of N pixels. Each row is bit-coded,
+        read from memory location I. VF is set if any pixels are set from set
+        to unset, and to 0 if not
+        '''
+
+        register_x = int_to_hex((op & 0xF00) >> 8)
+        register_y = int_to_hex((op & 0xF0) >> 4)
+
+        width = 8
+        height = op & 0xF
+        x_pos = self.mmu.read_register(register_x)
+        y_pos = self.mmu.read_register(register_y)
+
+        sprite_location = self.mmu.read_address_register()
+        did_flip = False
+
+        for row in range(height):
+            # For each row, get the value at current sprite location
+            # starting at the address register (I) and then get each
+            # bit for the pixel value
+            value = self.mmu.read(sprite_location)
+            for column in range(width - 1, -1, -1):
+                pixel = (value >> column) & 1  # Get the pixel, left to right
+
+                # Set the pixel
+                did_flip = did_flip or self.display.set_pixel(
+                    x_pos + column - width + 1,
+                    y_pos + row,
+                    pixel
+                )
+
+            sprite_location += 1
+
+        # Set VF it we flipped any pixels
+        self.mmu.write_register('F', 1 if did_flip else 0)
+
+    def handle_key_pressed_skip_op(self, op):
+        '''
+        Instruction 0xEX9E - Skips next instruction if key stored in VX is
+        pressed
+        '''
+
+        register_x = int_to_hex((op & 0xF00) >> 8)
+        key = self.read_register(register_x)
+        if self.keyboard.is_pressed(key):
+            self.pc += 1
+
+    def handle_key_not_pressed_skip_op(self, op):
+        '''
+        Instruction 0xEXA1 - Skips next instruction if key stored in VX is
+        not pressed
+        '''
+
+        register_x = int_to_hex((op & 0xF00) >> 8)
+        key = self.read_register(register_x)
+        if not self.keyboard.is_pressed(key):
+            self.pc += 1
+
+    def handle_set_register_to_delay_timer_op(self, op):
+        '''
+        Instruction 0xFX07 - Sets VX to the value of the delay timer
+        '''
+
+        register_x = int_to_hex((op & 0xF00) >> 8)
+        self.mmu.write_register(register_x, self.mmu.delay_timer)
+
+    def handle_key_press_await_op(self, op):
+        '''
+        Instruction 0xFX0A - A key press is awaited and then stored in VX
+        '''
+
+        register_x = int_to_hex((op & 0xF00) >> 8)
+        self.halted = True
+        self.on_unhalt = lambda key: self.mmu.write_register(register_x, key)
+
+    def handle_set_delay_timer_to_register_op(self, op):
+        '''
+        Instruction 0xFX15 - Sets delay timer to value of VX
+        '''
+
+        register_x = int_to_hex((op & 0xF00) >> 8)
+        self.mmu.delay_timer = self.mmu.read_register(register_x)
+
+    def handle_set_sound_timer_to_register_op(self, op):
+        '''
+        Instruction 0xFX18 - Sets sound timer to value of VX
+        '''
+
+        register_x = int_to_hex((op & 0xF00) >> 8)
+        self.mmu.sound_timer = self.mmu.read_register(register_x)
+
+    def handle_add_register_to_address_op(self, op):
+        '''
+        Instruction 0xFX1E - Adds VX to I. If we overflow range of
+        memory (i.e. I + VX > 0xFFF) set VF to 1, 0 otherwise
+        '''
+
+        register_x = int_to_hex((op & 0xF00) >> 8)
+        result = self.mmu.read_address_register() + \
+            self.mmu.read_register(register_x)
+
+        if result > 0xFFF:
+            result -= 0xFFF - 1  # Overflow back around
+            self.mmu.write_register('F', 1)
+        else:
+            self.mmu.write_register('F', 0)
+
+        self.mmu.write_address_register(result)
+
+    def handle_set_address_to_sprite_location_op(self, op):
+        '''
+        Instruction 0xFX29 - Sets I to location of the sprite for
+        character in VX - characters 0-F represented by 4x5 font
+        '''
+
+        register_x = int_to_hex((op & 0xF00) >> 8)
+        self.mmu.write_address_register(self.mmu.read_register(register_x) * 5)
+
+    def handle_set_bcd_op(self, op):
+        '''
+        Instruction 0xFX33 - Stores the binary coded decimal represetnation
+        of VX, with the most significant of the three digits at
+        address in I, the middle digit at I + 1, and the least
+        significant digit at I + 2
+        '''
+
+        register_x = int_to_hex((op & 0xF00) >> 8)
+        bcd = self.mmu.read_register(register_x)
+
+        self.mmu.write(self.mmu.read_address_register(), int(bcd / 100))
+        self.mmu.write(
+            self.mmu.read_address_register() + 1,
+            int((bcd / 10) % 10)
+        )
+        self.mmu.write(self.mmu.read_address_register() + 2, int(bcd % 10))
+
+    def handle_store_registers_in_address_op(self, op):
+        '''
+        Instruction 0xFX55 - Stores V0 - VX including VX in memory starting
+        at address I - I is left unchanges
+        '''
+
+        register_x = (op & 0xF00) >> 8
+        for i in range(register_x + 1):
+            self.mmu.write(
+                self.mmu.read_address_register() + i,
+                self.mmu.read_register(int_to_hex(i))
+            )
+
+    def handle_fill_registers_from_address_op(self, op):
+        '''
+        Instruction 0xFX65 - Fills V0 - VX including VX in memory starting
+        at address I - I is left unchanges
+        '''
+
+        register_x = (op & 0xF00) >> 8
+        for i in range(register_x + 1):
+            self.mmu.write_register(
+                int_to_hex(i),
+                self.mmu.read(self.mmu.read_address_register() + i)
+            )
 
     def _get_op(self):
         first = self.mmu.read(self.pc)
