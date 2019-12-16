@@ -14,6 +14,7 @@ class Chip8:
     DISPLAY_SCALE = 10
 
     def __init__(self, rom):
+        self.debug = []
         self.display = Display()
         self.keyboard = Keyboard()
         self.mmu = Mmu()
@@ -38,12 +39,13 @@ class Chip8:
         self.x.append(0)
 
         while True:
+
             if not self.cpu.halted:
                 debug = self.cpu.execute()
                 print(debug)
 
                 # Update screen
-                self._update_canvas()
+                self._update_screen()
                 self.window.update()
 
                 # Update timers
@@ -52,7 +54,8 @@ class Chip8:
             else:
                 print("HALTED")
 
-            time.sleep(1 / 60)  # 60 fps
+            # time.sleep(1 / 60)  # 60 fps
+            time.sleep(30 / 60)  # 60 fps
 
             # ADD UPDATED TIME TO DEBUG
             self.x.append(int(round(time.time() * 1000)) - millis)
@@ -83,9 +86,17 @@ class Chip8:
         self.canvas.configure(background='black')
         self.canvas.pack()
 
+        for reg in self.mmu.registers.keys():
+            lbl = tkinter.Label(
+                window,
+                text="%s - %s" % (reg, "{0:x}".format(self.mmu.registers[reg]))
+            )
+            lbl.pack()
+            self.debug.append(lbl)
+
         return window
 
-    def _update_canvas(self):
+    def _update_screen(self):
         self.canvas.delete("all")
         for pixel in self.display.get_set_pixels():
             x = pixel[0]
@@ -97,3 +108,10 @@ class Chip8:
                 (y * self.DISPLAY_SCALE) + self.DISPLAY_SCALE,
                 fill='#FFFFFF'
             )
+
+        registers = list(self.mmu.registers.keys())
+        for i in range(len(registers)):
+            lbl = self.debug[i]
+            reg = self.mmu.registers[registers[i]]
+            val = (registers[i], "{0:x}".format(reg))
+            lbl.config(text="%s - %s" % val)
