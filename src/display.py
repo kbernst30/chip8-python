@@ -24,3 +24,12 @@ class Display:
 
     def get_pixel(self, x, y):
         return self.screen[x][y]
+
+    def get_set_pixels(self):
+        pixels = []
+        for x in range(self.width):
+            for y in range(self.height):
+                if self.screen[x][y] == 1:
+                    pixels.append((x, y))
+
+        return pixels

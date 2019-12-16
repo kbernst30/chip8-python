@@ -1,3 +1,5 @@
+import signal
+import sys
 import tkinter
 import time
 
@@ -21,23 +23,24 @@ class Chip8:
 
         self.window = self._init_canvas()
 
-    def run(self):
-        y = 20
-        for x in range(self.display.width):
-            for y in range(self.display.height):
-                self.canvas.create_rectangle(
-                    x * self.DISPLAY_SCALE,
-                    y * self.DISPLAY_SCALE,
-                    (x * self.DISPLAY_SCALE) + self.DISPLAY_SCALE,
-                    (y * self.DISPLAY_SCALE) + self.DISPLAY_SCALE,
-                    fill="#000000"
-                )
+        self.x = []
 
+    def run(self):
         # Main emu loop
+
+        # DEBUG STUFF FOR TIMING
+        def signal_handler(sig, frame):
+            print(self.x[0:61])
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, signal_handler)
+        millis = int(round(time.time() * 1000))
+        self.x.append(0)
+
         while True:
             if not self.cpu.halted:
                 debug = self.cpu.execute()
-                # print(debug)
+                print(debug)
 
                 # Update screen
                 self._update_canvas()
@@ -50,7 +53,9 @@ class Chip8:
                 print("HALTED")
 
             time.sleep(1 / 60)  # 60 fps
-            # time.sleep(0.1)
+
+            # ADD UPDATED TIME TO DEBUG
+            self.x.append(int(round(time.time() * 1000)) - millis)
 
     def _init_canvas(self):
         window = tkinter.Tk()
@@ -75,17 +80,20 @@ class Chip8:
             height=canvas_height
         )
 
+        self.canvas.configure(background='black')
         self.canvas.pack()
 
         return window
 
     def _update_canvas(self):
-        for x in range(self.display.width):
-            for y in range(self.display.height):
-                self.canvas.create_rectangle(
-                    x * self.DISPLAY_SCALE,
-                    y * self.DISPLAY_SCALE,
-                    (x * self.DISPLAY_SCALE) + self.DISPLAY_SCALE,
-                    (y * self.DISPLAY_SCALE) + self.DISPLAY_SCALE,
-                    fill="#000000" if self.display.get_pixel(x, y) == 0 else '#FFFFFF'
-                )
+        self.canvas.delete("all")
+        for pixel in self.display.get_set_pixels():
+            x = pixel[0]
+            y = pixel[1]
+            self.canvas.create_rectangle(
+                x * self.DISPLAY_SCALE,
+                y * self.DISPLAY_SCALE,
+                (x * self.DISPLAY_SCALE) + self.DISPLAY_SCALE,
+                (y * self.DISPLAY_SCALE) + self.DISPLAY_SCALE,
+                fill='#FFFFFF'
+            )
