@@ -81,7 +81,7 @@ class Cpu:
         # All opcodes are big endian
         opcode = self._get_op()
         print("0x{:04x}".format(opcode))
-        # breakpoint()
+        breakpoint()
 
         # Get the prefix and execute corresponding instruction
         prefix = (opcode & 0xF000) >> 12
@@ -340,6 +340,7 @@ class Cpu:
         to unset, and to 0 if not
         '''
 
+        # breakpoint()
         register_x = int_to_hex((op & 0xF00) >> 8)
         register_y = int_to_hex((op & 0xF0) >> 4)
 
@@ -361,7 +362,7 @@ class Cpu:
 
                 # Set the pixel
                 did_flip = self.display.set_pixel(
-                    x_pos + column - width + 1,
+                    x_pos + width - column - 1,
                     y_pos + row,
                     pixel
                 ) or did_flip
