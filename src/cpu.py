@@ -80,7 +80,7 @@ class Cpu:
     def execute(self):
         # All opcodes are big endian
         opcode = self._get_op()
-        print("0x{:04x}".format(opcode))
+        # print("0x{:04x}".format(opcode))
         # breakpoint()
 
         # Get the prefix and execute corresponding instruction
@@ -133,7 +133,7 @@ class Cpu:
         '''
 
         if self._register_x_equals_nn(op):
-            self.pc += 1
+            self.pc += 2
 
     def handle_falsey_value_condition_op(self, op):
         '''
@@ -141,7 +141,7 @@ class Cpu:
         '''
 
         if not self._register_x_equals_nn(op):
-            self.pc += 1
+            self.pc += 2
 
     def handle_truthy_register_condition_op(self, op):
         '''
@@ -149,7 +149,7 @@ class Cpu:
         '''
 
         if self._register_x_equals_register_y(op):
-            self.pc += 1
+            self.pc += 2
 
     def handle_set_register_to_value_op(self, op):
         '''
@@ -248,6 +248,7 @@ class Cpu:
 
         register_x = int_to_hex((op & 0xF00) >> 8)
         register_y = int_to_hex((op & 0xF0) >> 4)
+        # breakpoint()
         self.mmu.write_register(
             register_x,
             self._do_subtract(
@@ -344,7 +345,6 @@ class Cpu:
         to unset, and to 0 if not
         '''
 
-        # breakpoint()
         register_x = int_to_hex((op & 0xF00) >> 8)
         register_y = int_to_hex((op & 0xF0) >> 4)
 
@@ -355,8 +355,6 @@ class Cpu:
 
         sprite_location = self.mmu.read_address_register()
         did_flip = False
-
-        # breakpoint()
 
         for row in range(height):
             # For each row, get the value at current sprite location
@@ -387,7 +385,7 @@ class Cpu:
         register_x = int_to_hex((op & 0xF00) >> 8)
         key = self.read_register(register_x)
         if self.keyboard.is_pressed(key):
-            self.pc += 1
+            self.pc += 2
 
     def handle_key_not_pressed_skip_op(self, op):
         '''
@@ -396,9 +394,9 @@ class Cpu:
         '''
 
         register_x = int_to_hex((op & 0xF00) >> 8)
-        key = self.read_register(register_x)
+        key = self.mmu.read_register(register_x)
         if not self.keyboard.is_pressed(key):
-            self.pc += 1
+            self.pc += 2
 
     def handle_set_register_to_delay_timer_op(self, op):
         '''
@@ -564,6 +562,8 @@ class Cpu:
 
         elif set_borrow:
             self.mmu.write_register('F', 0)
+
+        return val
 
     def test(self):
         self.primary_op_handlers[0x1](0x1DDD)

@@ -1,3 +1,6 @@
+import pygame
+
+
 class Keyboard:
     '''
     Represents a Hex Keyboard for the Chip-8 inpupt
@@ -12,39 +15,25 @@ class Keyboard:
     '''
 
     def __init__(self):
-        self.input = [0 for i in range(0xF)]
-
         self.key_mappings = {
-            '1': 0x1,
-            '2': 0x2,
-            '3': 0x3,
-            '4': 0xC,
-            'q': 0x4,
-            'w': 0x5,
-            'e': 0x6,
-            'r': 0xD,
-            'a': 0x7,
-            's': 0x8,
-            'd': 0x9,
-            'f': 0xE,
-            'z': 0xA,
-            'x': 0x0,
-            'c': 0xB,
-            'v': 0xF
+            0x0: pygame.K_x,
+            0x1: pygame.K_1,
+            0x2: pygame.K_2,
+            0x3: pygame.K_3,
+            0x4: pygame.K_q,
+            0x5: pygame.K_w,
+            0x6: pygame.K_e,
+            0x7: pygame.K_a,
+            0x8: pygame.K_s,
+            0x9: pygame.K_d,
+            0xA: pygame.K_z,
+            0xB: pygame.K_c,
+            0xC: pygame.K_4,
+            0xD: pygame.K_r,
+            0xE: pygame.K_f,
+            0xF: pygame.K_v,
         }
 
-    def press(self, key, callback=None):
-        if key in self.key_mappings:
-            if self.input[self.key_mappings[key]] == 0:
-                self.input[self.key_mappings[key]] = 1
-
-            if callback is not None:
-                callback(self.key_mappings[key])
-
-    def unpress(self, key):
-        if key in self.key_mappings:
-            if self.input[self.key_mappings[key]] == 1:
-                self.input[self.key_mappings[key]] = 0
-
-    def is_pressed(self, key):
-        return self.input[key] == 1
+    def is_pressed(self, key_to_check):
+        keys_pressed = pygame.key.get_pressed()
+        return keys_pressed[self.key_mappings[key_to_check]]
