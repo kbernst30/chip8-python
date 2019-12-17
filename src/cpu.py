@@ -81,7 +81,7 @@ class Cpu:
         # All opcodes are big endian
         opcode = self._get_op()
         print("0x{:04x}".format(opcode))
-        breakpoint()
+        # breakpoint()
 
         # Get the prefix and execute corresponding instruction
         prefix = (opcode & 0xF000) >> 12
@@ -360,11 +360,11 @@ class Cpu:
                 pixel = (value >> column) & 1  # Get the pixel, left to right
 
                 # Set the pixel
-                did_flip = did_flip or self.display.set_pixel(
+                did_flip = self.display.set_pixel(
                     x_pos + column - width + 1,
                     y_pos + row,
                     pixel
-                )
+                ) or did_flip
 
             sprite_location += 1
 
