@@ -37,3 +37,11 @@ class Keyboard:
     def is_pressed(self, key_to_check):
         keys_pressed = pygame.key.get_pressed()
         return keys_pressed[self.key_mappings[key_to_check]]
+
+    def get_pressed(self):
+        keys_pressed = pygame.key.get_pressed()
+        for k in self.key_mappings.keys():
+            if keys_pressed[self.key_mappings[k]]:
+                return k
+
+        return None

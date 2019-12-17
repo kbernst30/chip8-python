@@ -14,7 +14,6 @@ class Cpu:
         self.stack = []
 
         self.halted = False
-        self.on_unhalt = None
 
         self.primary_op_handlers = {
             0x0: lambda op: self.zero_prefix_op_handlers[op & 0xFFF](op),
@@ -78,6 +77,10 @@ class Cpu:
         }
 
     def execute(self):
+        if self.halted:
+            # Set it back to repeat and wait on instruction we are halted on
+            self.pc -= 2
+
         # All opcodes are big endian
         opcode = self._get_op()
 
@@ -91,8 +94,6 @@ class Cpu:
                 self.pc = self.pc & 0xFFF
             else:
                 print("Unknown op encounter - %s", "{0:x}".format(opcode))
-
-        return self.pc
 
     def handle_clear_screen_op(self, op):
         '''
@@ -410,7 +411,10 @@ class Cpu:
 
         register_x = int_to_hex((op & 0xF00) >> 8)
         self.halted = True
-        self.on_unhalt = lambda key: self.mmu.write_register(register_x, key)
+        key = self.keyboard.get_pressed()
+        if key is not None:
+            self.mmu.write_register(register_x, key)
+            self.halted = False
 
     def handle_set_delay_timer_to_register_op(self, op):
         '''

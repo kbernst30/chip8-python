@@ -27,13 +27,14 @@ class Chip8:
         self.font = pygame.font.SysFont("monospace", 20)
         self.window = self._init_canvas()
 
+        self.debug = False
+
     def run(self):
         # Main emu loop
         pygame.time.set_timer(self.TIMER, 17)  # ~60 Hz
 
         while True:
-            debug = self.cpu.execute()
-            # print(debug)
+            self.cpu.execute()
 
             # Update screen
             self._update_screen()
@@ -46,20 +47,30 @@ class Chip8:
                     self.mmu.update_sound_timer()
 
     def _init_canvas(self):
-        size = width, height = self.display.width * self.DISPLAY_SCALE, self.display.height * self.DISPLAY_SCALE + 500
+        width = self.display.width * self.DISPLAY_SCALE
+        height = self.display.height * self.DISPLAY_SCALE
+        if self.debug:
+            height += 500
+
+        size = width, height
         window = pygame.display.set_mode(size, pygame.locals.DOUBLEBUF)
         window.set_alpha(None)
+        pygame.display.flip()
+
+        self.canvas = pygame.display.get_surface()
+        self.canvas.fill((0, 0, 0))
+
         return window
 
     def _update_screen(self):
-        self.window.fill((0, 0, 0))
+        self.canvas.fill((0, 0, 0))
         rects = []
 
         for pixel in self.display.get_set_pixels():
             x = pixel[0]
             y = pixel[1]
 
-            rect = pygame.draw.rect(self.window, (255, 255, 255), (
+            rect = pygame.draw.rect(self.canvas, (255, 255, 255), (
                 x * self.DISPLAY_SCALE,
                 y * self.DISPLAY_SCALE,
                 self.DISPLAY_SCALE,
@@ -68,14 +79,15 @@ class Chip8:
 
             rects.append(rect)
 
-        registers = list(self.mmu.registers.keys())
-        lbls = []
-        for i in range(len(registers)):
-            reg = self.mmu.registers[registers[i]]
-            val = (registers[i], "{0:02x}".format(reg))
-            lbl = self.font.render("%s - %s" % val, 1, (255, 255, 255))
-            x, y = 10, (i * 20) + (self.display.height * self.DISPLAY_SCALE) + 10
-            self.window.blit(lbl, (x, y))
-            lbls.append(lbl)
+        if self.debug:
+            registers = list(self.mmu.registers.keys())
+            lbls = []
+            for i in range(len(registers)):
+                reg = self.mmu.registers[registers[i]]
+                val = (registers[i], "{0:02x}".format(reg))
+                lbl = self.font.render("%s - %s" % val, 1, (255, 255, 255))
+                x, y = 10, (i * 20) + (self.display.height * self.DISPLAY_SCALE) + 10
+                self.canvas.blit(lbl, (x, y))
+                lbls.append(lbl)
 
         pygame.display.flip()
