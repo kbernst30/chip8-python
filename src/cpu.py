@@ -380,7 +380,7 @@ class Cpu:
         '''
 
         register_x = int_to_hex((op & 0xF00) >> 8)
-        key = self.read_register(register_x)
+        key = self.mmu.read_register(register_x)
         if self.keyboard.is_pressed(key):
             self.pc += 2
 
