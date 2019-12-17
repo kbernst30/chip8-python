@@ -1,5 +1,6 @@
 import sys
 import pygame
+import pygame.locals
 
 from cpu import Cpu
 from display import Display
@@ -46,7 +47,8 @@ class Chip8:
 
     def _init_canvas(self):
         size = width, height = self.display.width * self.DISPLAY_SCALE, self.display.height * self.DISPLAY_SCALE + 500
-        window = pygame.display.set_mode(size)
+        window = pygame.display.set_mode(size, pygame.locals.DOUBLEBUF)
+        window.set_alpha(None)
         return window
 
     def _update_screen(self):

@@ -12,8 +12,5 @@ def load_rom(rom):
 
 if __name__ == '__main__':
     rom = load_rom("PONG")
-    # insts = ["0x{:04x}".format((rom[i] << 8) | rom[i + 1]) for i in range(0, len(rom), 2)]
-    # for i in insts:
-    #     print(i)
     chip8 = Chip8(rom)
     chip8.run()

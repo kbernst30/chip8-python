@@ -80,8 +80,6 @@ class Cpu:
     def execute(self):
         # All opcodes are big endian
         opcode = self._get_op()
-        # print("0x{:04x}".format(opcode))
-        # breakpoint()
 
         # Get the prefix and execute corresponding instruction
         prefix = (opcode & 0xF000) >> 12
@@ -248,7 +246,6 @@ class Cpu:
 
         register_x = int_to_hex((op & 0xF00) >> 8)
         register_y = int_to_hex((op & 0xF0) >> 4)
-        # breakpoint()
         self.mmu.write_register(
             register_x,
             self._do_subtract(
@@ -294,11 +291,11 @@ class Cpu:
         '''
 
         register_x = int_to_hex((op & 0xF00) >> 8)
-        bit = self.mmu.read_register(register_x) & 0x1
+        bit = self.mmu.read_register(register_x) >> 7
         self.mmu.write_register('F', bit)
         self.mmu.write_register(
             register_x,
-            self.mmu.read_register(register_x) << 1
+            (self.mmu.read_register(register_x) << 1) & 0xFF
         )
 
     def handle_falsey_register_condition_op(self, op):
@@ -442,7 +439,7 @@ class Cpu:
             self.mmu.read_register(register_x)
 
         if result > 0xFFF:
-            result -= 0xFFF - 1  # Overflow back around
+            result -= 0x100  # Overflow back around
             self.mmu.write_register('F', 1)
         else:
             self.mmu.write_register('F', 0)
@@ -538,7 +535,7 @@ class Cpu:
         # the max capacity for 1 byte (i.e. 255) we need to deal with the
         # excess and set carry flag if needed
         if val > 0xFF:
-            val -= 0xFF - 1  # Overflows back around
+            val -= 0x100  # Overflows back around
             if set_carry:
                 self.mmu.write_register('F', 1)
 
@@ -556,7 +553,7 @@ class Cpu:
         # if needed (if we borrowed)
 
         if val < 0:
-            val += 0xFF + 1
+            val += 0x100
             if set_borrow:
                 self.mmu.write_register('F', 1)
 
