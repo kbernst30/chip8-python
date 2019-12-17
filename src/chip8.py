@@ -54,7 +54,7 @@ class Chip8:
             else:
                 print("HALTED")
 
-            # time.sleep(1 / 60)  # 60 fps
+            time.sleep(1 / 60)  # 60 fps
             # time.sleep(30 / 60)  # 60 fps
 
             # ADD UPDATED TIME TO DEBUG

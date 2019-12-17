@@ -11,5 +11,5 @@ def load_rom(rom):
 
 
 if __name__ == '__main__':
-    chip8 = Chip8(load_rom("TEST"))
+    chip8 = Chip8(load_rom("PONG"))
     chip8.run()

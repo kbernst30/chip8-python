@@ -81,14 +81,18 @@ class Cpu:
         # All opcodes are big endian
         opcode = self._get_op()
         print("0x{:04x}".format(opcode))
-        breakpoint()
+        # breakpoint()
 
         # Get the prefix and execute corresponding instruction
         prefix = (opcode & 0xF000) >> 12
         try:
             self.primary_op_handlers[prefix](opcode)
         except KeyError:
-            print("Unknown op encounter - %s", "{0:x}".format(opcode))
+            if prefix == 0:
+                # Not often used, 0x0NNN - Calls program at NNN
+                self.pc = self.pc & 0xFFF
+            else:
+                print("Unknown op encounter - %s", "{0:x}".format(opcode))
 
         return self.pc
 
@@ -351,6 +355,8 @@ class Cpu:
 
         sprite_location = self.mmu.read_address_register()
         did_flip = False
+
+        # breakpoint()
 
         for row in range(height):
             # For each row, get the value at current sprite location

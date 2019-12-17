@@ -12,12 +12,15 @@ class Display:
         ]
 
     def set_pixel(self, x, y, value):
-        original = self.screen[x][y]
+        actual_x = x if x < self.width else x - self.width
+        actual_y = y if y < self.height else y - self.height
+
+        original = self.screen[actual_x][actual_y]
 
         # We flip the color of the screen pixel if sprite
         # pixel is set
         new_val = original ^ value
-        self.screen[x][y] = new_val
+        self.screen[actual_x][actual_y] = new_val
 
         # Return if we flipped the screen pixel or not
         return original != new_val
