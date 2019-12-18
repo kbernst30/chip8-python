@@ -81,8 +81,13 @@ class Cpu:
             # Set it back to repeat and wait on instruction we are halted on
             self.pc -= 2
 
+        print(self.pc)
+
         # All opcodes are big endian
         opcode = self._get_op()
+
+        print("0x{:02x}".format(opcode))
+        breakpoint()
 
         # Get the prefix and execute corresponding instruction
         prefix = (opcode & 0xF000) >> 12

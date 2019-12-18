@@ -11,6 +11,6 @@ def load_rom(rom):
 
 
 if __name__ == '__main__':
-    rom = load_rom("Keypad Test [Hap, 2006].ch8")
+    rom = load_rom("PONG")
     chip8 = Chip8(rom)
     chip8.run()

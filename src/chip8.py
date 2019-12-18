@@ -27,7 +27,7 @@ class Chip8:
         self.font = pygame.font.SysFont("monospace", 20)
         self.window = self._init_canvas()
 
-        self.debug = False
+        self.debug = True
 
     def run(self):
         # Main emu loop
